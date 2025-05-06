@@ -1,6 +1,7 @@
 import json
 import logging
 import hashlib
+import os
 
 import openai
 from pydantic import BaseModel
@@ -14,13 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 class Agent(object):
-  assistant_id: str
   config: dict
-  _fingerprint: str
   model: BaseModel
+  env_var: str
 
-  def __init__(self, config_path: str, model: BaseModel, assistant_id: str = None):
-    self.assistant_id = assistant_id
+  def __init__(self, config_path: str, model: BaseModel, env_var: str = "ASSISTANT_ID"):
+    self.env_var = env_var
+    self.model = model
 
     # Load the assistant config
     self.config = parse_file(config_path)
@@ -32,10 +33,6 @@ class Agent(object):
                 "schema": model.model_json_schema(),
         }
     }
-
-    self.model = model
-    self._fingerprint = self._compute_fingerprint(self.config)
-    self.config["metadata"] = {"fingerprint": self._fingerprint}
 
   def _compute_fingerprint(self, config: dict) -> str:
     """
@@ -52,14 +49,16 @@ class Agent(object):
   def create(self) -> None:
     try:
       # Add fingerprint to metadata
-      self.config["metadata"] = {"fingerprint": self._fingerprint}
+      fingerprint = self._compute_fingerprint(self.config)
 
-      assistant = openai.beta.assistants.create(**self.config)
+      assistant = openai.beta.assistants.create(
+          **self.config,
+          metadata={"fingerprint": fingerprint}
+      )
       print(f"Assistant created: {assistant.id}")
-      self.assistant_id = assistant.id
 
       # Save the assistant ID to .env file
-      set_key(".env", "ASSISTANT_ID", assistant.id)
+      set_key(".env", self.env_var, assistant.id)
     except Exception as e:
       print(f"Error creating search assistant: {e}")
       raise
@@ -69,10 +68,8 @@ class Agent(object):
     Update the assistant configuration.
     """
     try:
-      assistant = openai.beta.assistants.update(
-          assistant_id=self.assistant_id,
-          **self.config
-      )
+      assistant_id = self._get_assistant_id()
+      assistant = openai.beta.assistants.update(assistant_id=assistant_id, **self.config)
       print(f"Assistant updated: {assistant.id}")
     except Exception as e:
       print(f"Error updating assistant: {e}")
@@ -82,10 +79,11 @@ class Agent(object):
     """
     Update the assistant if configuration fingerprint differs from remote.
     """
+    fingerprint = self._compute_fingerprint(self.config)
     remote = self._get_remote_config()
     remote_fingerprint = remote.metadata.get("fingerprint")
 
-    if self._fingerprint != remote_fingerprint:
+    if fingerprint != remote_fingerprint:
       print("Configuration has changed, updating assistant...")
       self.update()
     else:
@@ -96,7 +94,8 @@ class Agent(object):
     Fetch the current assistant configuration from OpenAI API.
     """
     try:
-      return openai.beta.assistants.retrieve(self.assistant_id)
+      assistant_id = self._get_assistant_id()
+      return openai.beta.assistants.retrieve(assistant_id)
     except Exception as e:
       print(f"Error fetching assistant: {e}")
       raise
@@ -106,14 +105,15 @@ class Agent(object):
     Delete the assistant.
     """
     try:
-      openai.beta.assistants.delete(self.assistant_id)
-      print(f"Assistant deleted: {self.assistant_id}")
+      assistant_id = self._get_assistant_id()
+      openai.beta.assistants.delete(assistant_id)
+      print(f"Assistant deleted: {assistant_id}")
     except Exception as e:
       print(f"Error deleting assistant: {e}")
       raise
 
     # Remove the assistant ID from .env file
-    unset_key(".env", "ASSISTANT_ID")
+    unset_key(".env", self.env_var)
 
   def query(self, prompt: str) -> str:
     '''
@@ -135,10 +135,8 @@ class Agent(object):
       logger.info(f"Created message: {message.id}")
 
       # Create a run and wait for completion
-      run = openai.beta.threads.runs.create_and_poll(
-          thread_id=thread.id,
-          assistant_id=self.assistant_id
-      )
+      assistant_id = self._get_assistant_id()
+      run = openai.beta.threads.runs.create_and_poll(thread_id=thread.id, assistant_id=assistant_id)
 
       if run.status != "completed":
         raise Exception(f"Run ended with status: {run.status}")
@@ -160,3 +158,13 @@ class Agent(object):
     parsed = json.loads(response)
     logger.info(f"Response:\n{json.dumps(parsed, indent=2)}")
     return self.model(**parsed)
+
+  def _get_assistant_id(self) -> str:
+    """
+    Get the assistant ID from environment variables.
+    Raises ValueError if not found.
+    """
+    assistant_id = os.getenv(self.env_var)
+    if not assistant_id:
+      raise ValueError(f"Assistant ID not found in environment variable {self.env_var}")
+    return assistant_id
