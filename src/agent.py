@@ -1,13 +1,12 @@
 import json
 import logging
 import hashlib
-from pathlib import Path
 
 import openai
+from pydantic import BaseModel
 from dotenv import set_key, unset_key
 
 from .yaml import parse_file
-
 
 # logging
 logging.basicConfig(level=logging.INFO)
@@ -18,22 +17,23 @@ class Agent(object):
   assistant_id: str
   config: dict
   _fingerprint: str
+  model: BaseModel
 
-  def __init__(self, config_path, schema, assistant_id: str = None):
+  def __init__(self, config_path: str, model: BaseModel, assistant_id: str = None):
     self.assistant_id = assistant_id
+
     # Load the assistant config
     self.config = parse_file(config_path)
-
-    # Add response format to config
     self.config["response_format"] = {
         "type": "json_schema",
         "json_schema": {
             "name": "schema",
-            "description": "A schema for the response.",
-            "schema": schema,
+                "description": "A schema for the response.",
+                "schema": model.model_json_schema(),
         }
     }
 
+    self.model = model
     self._fingerprint = self._compute_fingerprint(self.config)
     self.config["metadata"] = {"fingerprint": self._fingerprint}
 
@@ -157,8 +157,6 @@ class Agent(object):
       logger.error(f"Error in query handling: {e}")
       raise
 
-    # by convention, the response is a JSON object with a "root" key. This is a limitation
-    # of the OpenAI API: the root must be a JSON object, not a JSON array.
     parsed = json.loads(response)
     logger.info(f"Response:\n{json.dumps(parsed, indent=2)}")
-    return parsed["root"]
+    return self.model(**parsed)
