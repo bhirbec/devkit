@@ -47,6 +47,7 @@ class Agent(object):
 
     try:
         # Using the correct method for chat completions (openai.chat.completions.create)
+      logger.info(f"Sending request to OpenAI API ({params['model']})")
       completion = self._client.beta.chat.completions.parse(**params)
 
       # Parse the response and return the result
