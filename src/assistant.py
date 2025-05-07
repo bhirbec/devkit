@@ -55,12 +55,12 @@ class Assistant(object):
           **self.config,
           metadata={"fingerprint": fingerprint}
       )
-      print(f"Assistant created: {assistant.id}")
+      logger.info(f"Assistant created: {assistant.id}")
 
       # Save the assistant ID to .env file
       set_key(".env", self.env_var, assistant.id)
     except Exception as e:
-      print(f"Error creating search assistant: {e}")
+      logger.error(f"Error creating search assistant: {e}")
       raise
 
   def update(self) -> None:
@@ -70,9 +70,9 @@ class Assistant(object):
     try:
       assistant_id = self._get_assistant_id()
       assistant = openai.beta.assistants.update(assistant_id=assistant_id, **self.config)
-      print(f"Assistant updated: {assistant.id}")
+      logger.info(f"Assistant updated: {assistant.id}")
     except Exception as e:
-      print(f"Error updating assistant: {e}")
+      logger.error(f"Error updating assistant: {e}")
       raise
 
   def update_if_config_has_changed(self) -> None:
@@ -84,10 +84,10 @@ class Assistant(object):
     remote_fingerprint = remote.metadata.get("fingerprint")
 
     if fingerprint != remote_fingerprint:
-      print("Configuration has changed, updating assistant...")
+      logger.info("Configuration has changed, updating assistant...")
       self.update()
     else:
-      print("No changes detected in configuration.")
+      logger.info("No changes detected in configuration.")
 
   def _get_remote_config(self) -> openai.types.beta.assistant.Assistant:
     """
@@ -97,7 +97,7 @@ class Assistant(object):
       assistant_id = self._get_assistant_id()
       return openai.beta.assistants.retrieve(assistant_id)
     except Exception as e:
-      print(f"Error fetching assistant: {e}")
+      logger.error(f"Error fetching assistant: {e}")
       raise
 
   def delete(self) -> None:
@@ -107,9 +107,9 @@ class Assistant(object):
     try:
       assistant_id = self._get_assistant_id()
       openai.beta.assistants.delete(assistant_id)
-      print(f"Assistant deleted: {assistant_id}")
+      logger.info(f"Assistant deleted: {assistant_id}")
     except Exception as e:
-      print(f"Error deleting assistant: {e}")
+      logger.error(f"Error deleting assistant: {e}")
       raise
 
     # Remove the assistant ID from .env file

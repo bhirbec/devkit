@@ -1,9 +1,13 @@
 import openai
 import json
 import yaml
-
+import logging
 from typing import Dict
 from pydantic import BaseModel
+
+# logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class Agent(object):
@@ -46,7 +50,9 @@ class Agent(object):
       completion = self._client.beta.chat.completions.parse(**params)
 
       # Parse the response and return the result
-      return completion.choices[0].message.parsed
+      result = completion.choices[0].message.parsed
+      logger.info(f"Response: {result}")
+      return result
     except Exception as e:
-      print(f"Error querying the OpenAI API: {e}")
+      logger.error(f"Error querying the OpenAI API: {e}")
       raise
