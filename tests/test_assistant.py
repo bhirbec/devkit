@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 from unittest.mock import patch, MagicMock
 
-from src.agent import Agent
+from src.assistant import Assistant
 
 
 @pytest.fixture(autouse=True)
@@ -14,7 +14,7 @@ def setup_env():
 
 @pytest.fixture
 def mock_parse_file(config):
-  with patch('src.agent.parse_file', return_value=config) as mock:
+  with patch('src.assistant.parse_file', return_value=config) as mock:
     yield mock
 
 
@@ -45,22 +45,22 @@ class DummyModel(BaseModel):
 
 class TestAgentInit:
   def test_init(self, config, model, env_var, mock_parse_file):
-    agent = Agent(config_path="dummy_path", model=model, env_var=env_var)
-    assert agent.env_var == env_var
-    assert agent.config == config
+    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assert assistant.env_var == env_var
+    assert assistant.config == config
 
 
 class TestAgentCreate:
   @patch('openai.beta.assistants.create')
-  @patch('src.agent.set_key')
+  @patch('src.assistant.set_key')
   def test_create(self, mock_set_key, mock_create, config, model, env_var, mock_parse_file):
     # Mock the assistant creation response
     mock_assistant = MagicMock()
     mock_assistant.id = "test_assistant_id"
     mock_create.return_value = mock_assistant
 
-    agent = Agent(config_path="dummy_path", model=model, env_var=env_var)
-    agent.create()
+    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant.create()
 
     # Verify OpenAI API was called with correct config
     mock_create.assert_called_once()
@@ -78,8 +78,8 @@ class TestAgentUpdate:
     mock_assistant = MagicMock()
     mock_update.return_value = mock_assistant
 
-    agent = Agent(config_path="dummy_path", model=model, env_var=env_var)
-    agent.update()
+    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant.update()
 
     # Verify OpenAI API was called with correct config
     mock_update.assert_called_once()
@@ -95,9 +95,9 @@ class TestAgentUpdateIfConfigChanged:
     mock_remote = MagicMock()
     mock_remote.metadata = {"fingerprint": "different_fingerprint"}
 
-    with patch('src.agent.Agent._get_remote_config', return_value=mock_remote):
-      agent = Agent(config_path="dummy_path", model=model, env_var=env_var)
-      agent.update_if_config_has_changed()
+    with patch('src.assistant.Assistant._get_remote_config', return_value=mock_remote):
+      assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+      assistant.update_if_config_has_changed()
 
     # Verify update was called
     mock_update.assert_called_once()
@@ -107,15 +107,15 @@ class TestAgentUpdateIfConfigChanged:
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
-    agent = Agent(config_path="dummy_path", model=model, env_var=env_var)
-    fingerprint = agent._compute_fingerprint(agent.config)
+    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    fingerprint = assistant._compute_fingerprint(assistant.config)
 
     # Mock the remote assistant with same fingerprint
     mock_remote = MagicMock()
     mock_remote.metadata = {"fingerprint": fingerprint}
 
-    with patch('src.agent.Agent._get_remote_config', return_value=mock_remote):
-      agent.update_if_config_has_changed()
+    with patch('src.assistant.Assistant._get_remote_config', return_value=mock_remote):
+      assistant.update_if_config_has_changed()
 
     # Verify update was not called
     mock_update.assert_not_called()
@@ -131,8 +131,8 @@ class TestAgentDelete:
     mock_assistant = MagicMock()
     mock_delete.return_value = mock_assistant
 
-    agent = Agent(config_path="dummy_path", model=model, env_var=env_var)
-    agent.delete()
+    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant.delete()
 
     # Verify OpenAI API was called with correct assistant ID
     mock_delete.assert_called_once_with("test_assistant_id")
@@ -171,7 +171,7 @@ class TestAgentQuery:
     mock_list_response.data = [MagicMock(content=[mock_content])]
     mock_list_messages.return_value = mock_list_response
 
-    agent = Agent(config_path="dummy_path", model=model, env_var=env_var)
-    response = agent.query("test query")
+    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    response = assistant.query("test query")
     assert response.name == "test"
     assert response.age == 25
