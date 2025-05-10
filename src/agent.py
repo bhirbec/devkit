@@ -1,9 +1,10 @@
-import openai
-import json
-import yaml
 import logging
 from typing import Dict
+
+import openai
 from pydantic import BaseModel
+
+from .yaml import parse_file
 
 # logging
 logging.basicConfig(level=logging.INFO)
@@ -15,21 +16,9 @@ class Agent(object):
   _schema: BaseModel
 
   def __init__(self, config_path: str, schema: BaseModel):
-    self._config = self._load_config(config_path)
+    self._config = parse_file(config_path)
     self._schema = schema
     self._client = openai.OpenAI()
-
-  def _load_config(self, config_path: str) -> Dict:
-    """
-    Loads the assistant's instructions from a markdown file.
-    """
-    try:
-      with open(config_path, 'r') as file:
-        config = yaml.safe_load(file)
-      return config
-    except Exception as e:
-      print(f"Error loading configuration: {e}")
-      raise
 
   def query(self, prompt: str) -> Dict[str, str]:
     """
@@ -38,11 +27,10 @@ class Agent(object):
     :param prompt: The user's prompt (either an exact command or an instructional request).
     :return: The response in JSON format.
     """
+    logger.debug(f"Querying OpenAI API with prompt: {prompt}")
 
     params = dict(self._config)
     params['messages'].append({"role": "user", "content": prompt})
-
-    # Set the response format as specified in the Pydantic schema
     params['response_format'] = self._schema
 
     try:
