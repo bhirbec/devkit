@@ -7,7 +7,7 @@ import openai
 from pydantic import BaseModel
 from dotenv import set_key, unset_key
 
-from .yaml import parse_file
+from .yaml_utils import parse_file
 
 # logging
 logging.basicConfig(level=logging.INFO)
@@ -157,7 +157,7 @@ class Assistant(object):
 
     parsed = json.loads(response)
     logger.info(f"Response:\n{json.dumps(parsed, indent=2)}")
-    return self.model(**parsed)
+    return self.model.model_validate(parsed)
 
   def _get_assistant_id(self) -> str:
     """

@@ -9,51 +9,25 @@ A collection of Python utilities.
 
 ## Setting up the Virtual Environment
 
-Create a new virtual environment:
+Create and activate a new virtual environment using [uv](https://github.com/astral-sh/uv):
 
 ```bash
-# Using venv (built into Python 3.9+)
-python3 -m venv venv
+uv venv
 ```
-
-Activate the virtual environment:
-
-```bash
-source venv/bin/activate
-```
-
-You should see `(venv)` at the beginning of your command prompt when the virtual environment is
-activated.
 
 ## Installing Requirements
-
-Install `poetry`
-
-```bash
-pip install --upgrade pip
-pip install poetry
-```
 
 Install the required packages:
 
 ```bash
-poetry install --with dev
+uv pip install -r pyproject.toml
 ```
 
-## Deactivating the Virtual Environment
-
-When you're done working, you can deactivate the virtual environment:
+To install dev dependencies:
 
 ```bash
-deactivate
+uv pip install -r pyproject.toml --extra dev
 ```
-
-## Additional Notes
-
-- Always activate the virtual environment before running the backend server
-- Keep your requirements.txt up to date by running `pip freeze > requirements.txt` when adding new
-  packages
-- If you need to install additional packages, do so while the virtual environment is activated
 
 ## Testing
 
@@ -63,23 +37,23 @@ section.
 Run tests using PyTest:
 
 ```bash
-pytest
+uv run pytest
 ```
 
 To test a specific file:
 
 ```bash
-pytest tests/test_file.py
+uv run pytest tests/test_yaml.py
 ```
 
 For verbose output:
 
 ```bash
-pytest -v
+uv run pytest -v
 ```
 
 To run tests with coverage:
 
 ```bash
-pytest --cov=.
+uv run pytest --cov=.
 ```
