@@ -32,8 +32,7 @@ class Agent(object):
     :param prompt: The user's prompt (either an exact command or an instructional request).
     :return: The response in JSON format.
     """
-    logger.debug(f"Querying OpenAI API with prompt: {prompt}")
-
+    print(self._config)
     params = dict(DEFAULT_PARAMS)
     params.update(self._config)
     params['messages'].append({"role": "user", "content": prompt})
@@ -42,8 +41,8 @@ class Agent(object):
     client = openai.OpenAI()
 
     try:
-        # Using the correct method for chat completions (openai.chat.completions.create)
-      logger.info(f"Sending request to OpenAI API ({params['model']})")
+      logger.info(f"Querying OpenAI API")
+      logger.debug(f"client.beta.chat.completions.parse params : {params}")
       completion = client.beta.chat.completions.parse(**params)
 
       # Parse the response and return the result

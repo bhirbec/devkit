@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 from unittest.mock import patch, MagicMock
 
-from src.assistant import Assistant
+from pykit.assistant import Assistant
 
 
 @pytest.fixture(autouse=True)
@@ -14,7 +14,7 @@ def setup_env():
 
 @pytest.fixture
 def mock_parse_file(config):
-  with patch('src.assistant.parse_file', return_value=config) as mock:
+  with patch('pykit.assistant.parse_file', return_value=config) as mock:
     yield mock
 
 
@@ -52,7 +52,7 @@ class TestAgentInit:
 
 class TestAgentCreate:
   @patch('openai.beta.assistants.create')
-  @patch('src.assistant.set_key')
+  @patch('pykit.assistant.set_key')
   def test_create(self, mock_set_key, mock_create, config, model, env_var, mock_parse_file):
     # Mock the assistant creation response
     mock_assistant = MagicMock()
@@ -95,7 +95,7 @@ class TestAgentUpdateIfConfigChanged:
     mock_remote = MagicMock()
     mock_remote.metadata = {"fingerprint": "different_fingerprint"}
 
-    with patch('src.assistant.Assistant._get_remote_config', return_value=mock_remote):
+    with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
       assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
       assistant.update_if_config_has_changed()
 
@@ -114,7 +114,7 @@ class TestAgentUpdateIfConfigChanged:
     mock_remote = MagicMock()
     mock_remote.metadata = {"fingerprint": fingerprint}
 
-    with patch('src.assistant.Assistant._get_remote_config', return_value=mock_remote):
+    with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
       assistant.update_if_config_has_changed()
 
     # Verify update was not called
