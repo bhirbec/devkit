@@ -4,7 +4,7 @@ from typing import Dict
 import openai
 from pydantic import BaseModel
 
-from .yaml import parse_file
+from .yaml_utils import parse_file
 
 # logging
 logging.basicConfig(level=logging.INFO)
@@ -32,7 +32,6 @@ class Agent(object):
     :param prompt: The user's prompt (either an exact command or an instructional request).
     :return: The response in JSON format.
     """
-    print(self._config)
     params = dict(DEFAULT_PARAMS)
     params.update(self._config)
     params['messages'].append({"role": "user", "content": prompt})

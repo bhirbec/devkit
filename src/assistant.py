@@ -2,24 +2,25 @@ import json
 import logging
 import hashlib
 import os
+from typing import Any, Type
 
 import openai
 from pydantic import BaseModel
 from dotenv import set_key, unset_key
 
 from .yaml_utils import parse_file
+from .thread import Thread
 
 # logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class Assistant(object):
   config: dict
-  model: BaseModel
+  model: Type[BaseModel]
   env_var: str
 
-  def __init__(self, config_path: str, model: BaseModel, env_var: str = "ASSISTANT_ID"):
+  def __init__(self, config_path: str, model: Type[BaseModel], env_var: str = "ASSISTANT_ID"):
     self.env_var = env_var
     self.model = model
 
@@ -34,19 +35,41 @@ class Assistant(object):
         }
     }
 
+  def create_thread(self) -> Thread:
+    """
+    Create a new thread for conversation with the assistant.
+
+    Returns:
+      A Thread object
+    """
+    try:
+      thread = openai.beta.threads.create()
+      logger.info(f"Created thread: {thread.id}")
+      return Thread(thread.id, self._get_assistant_id())
+    except Exception as e:
+      logger.error(f"Error creating thread: {e}")
+      raise
+
   def _compute_fingerprint(self, config: dict) -> str:
     """
     Compute a fingerprint of the configuration.
     """
+    # Create a copy of the config to avoid modifying the original
+    config_copy = config.copy()
+
     try:
-      del config["metadata"]
+      # Remove metadata if it exists
+      del config_copy["metadata"]
     except KeyError:
       pass
 
-    config_str = json.dumps(config, sort_keys=True)
+    config_str = json.dumps(config_copy, sort_keys=True)
     return hashlib.sha256(config_str.encode()).hexdigest()
 
   def create(self) -> None:
+    """
+    Create a new assistant.
+    """
     try:
       # Add fingerprint to metadata
       fingerprint = self._compute_fingerprint(self.config)
@@ -60,7 +83,7 @@ class Assistant(object):
       # Save the assistant ID to .env file
       set_key(".env", self.env_var, assistant.id)
     except Exception as e:
-      logger.error(f"Error creating search assistant: {e}")
+      logger.error(f"Error creating assistant: {e}")
       raise
 
   def update(self) -> None:
@@ -92,6 +115,9 @@ class Assistant(object):
   def _get_remote_config(self) -> openai.types.beta.assistant.Assistant:
     """
     Fetch the current assistant configuration from OpenAI API.
+
+    Returns:
+      The assistant configuration from OpenAI
     """
     try:
       assistant_id = self._get_assistant_id()
@@ -108,56 +134,39 @@ class Assistant(object):
       assistant_id = self._get_assistant_id()
       openai.beta.assistants.delete(assistant_id)
       logger.info(f"Assistant deleted: {assistant_id}")
+
+      # Remove the assistant ID from .env file
+      unset_key(".env", self.env_var)
     except Exception as e:
-      logger.error(f"Error deleting assistant: {e}")
+      logger.error(f"Error deleting assistant {assistant_id}: {e}")
       raise
 
-    # Remove the assistant ID from .env file
-    unset_key(".env", self.env_var)
+  def query(self, prompt: str) -> Any:
+    '''
+    Query the assistant with a single prompt and return the result.
 
-  def query(self, prompt: str) -> str:
+    This is a convenience method that creates a thread, adds a message,
+    runs the thread, and returns the result.
+
+    Args:
+      prompt: The user's prompt
+
+    Returns:
+      The validated response
     '''
-    Query the assistant.
-    '''
-    logger.info("Querying the assistant")
+    logger.info(f"Querying the assistant with prompt: {prompt[:50]}...")
 
     try:
-      # Create a thread
-      thread = openai.beta.threads.create()
-      logger.info(f"Created thread: {thread.id}")
+      # Create a thread and use it for the query
+      thread = self.create_thread()
+      message_id = thread.add_message(prompt)
+      logger.debug(f"Added message with ID: {message_id}")
 
-      # Create a message
-      message = openai.beta.threads.messages.create(
-          thread_id=thread.id,
-          role="user",
-          content=prompt
-      )
-      logger.info(f"Created message: {message.id}")
-
-      # Create a run and wait for completion
-      assistant_id = self._get_assistant_id()
-      run = openai.beta.threads.runs.create_and_poll(thread_id=thread.id, assistant_id=assistant_id)
-
-      if run.status != "completed":
-        raise Exception(f"Run ended with status: {run.status}")
-
-      logger.info("Run completed successfully")
-
-      # Retrieve latest message from the thread
-      messages = openai.beta.threads.messages.list(
-          thread_id=thread.id,
-          limit=1
-      )
-
-      # Process the answers
-      response = messages.data[0].content[0].text.value
+      result = thread.run(self.model)
+      return result
     except Exception as e:
       logger.error(f"Error in query handling: {e}")
       raise
-
-    parsed = json.loads(response)
-    logger.info(f"Response:\n{json.dumps(parsed, indent=2)}")
-    return self.model.model_validate(parsed)
 
   def _get_assistant_id(self) -> str:
     """
