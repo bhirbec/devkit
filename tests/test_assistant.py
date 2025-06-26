@@ -51,6 +51,7 @@ class TestAgentInit:
 
 
 class TestAgentCreate:
+
   @patch('openai.beta.assistants.create')
   @patch('pykit.assistant.set_key')
   def test_create(self, mock_set_key, mock_create, config, model, env_var, mock_parse_file):
@@ -76,6 +77,7 @@ class TestAgentUpdate:
 
     # Mock the assistant update response
     mock_assistant = MagicMock()
+    mock_assistant.id = "test_assistant_id"
     mock_update.return_value = mock_assistant
 
     assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
@@ -86,6 +88,7 @@ class TestAgentUpdate:
 
 
 class TestAgentUpdateIfConfigChanged:
+
   @patch('openai.beta.assistants.update')
   def test_update_when_config_changed(self, mock_update, config, model, env_var, mock_parse_file):
     # Set environment variable
@@ -94,13 +97,23 @@ class TestAgentUpdateIfConfigChanged:
     # Mock the remote assistant with different fingerprint
     mock_remote = MagicMock()
     mock_remote.metadata = {"fingerprint": "different_fingerprint"}
+    mock_update.return_value = MagicMock()
 
+    # Create a non-coroutine function to replace the async update method
+    def sync_update():
+      return None
+
+    # Mock the update method and _get_remote_config
     with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
-      assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
-      assistant.update_if_config_has_changed()
+      with patch.object(Assistant, 'update', new=sync_update):
+        assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
 
-    # Verify update was called
-    mock_update.assert_called_once()
+        # We need to patch the update method again to track calls
+        with patch.object(assistant, 'update') as mock_update_method:
+          assistant.update_if_config_has_changed()
+
+          # Verify update was called
+          mock_update_method.assert_called_once()
 
   @patch('openai.beta.assistants.update')
   def test_no_update_when_config_unchanged(self, mock_update, config, model, env_var, mock_parse_file):
@@ -114,14 +127,25 @@ class TestAgentUpdateIfConfigChanged:
     mock_remote = MagicMock()
     mock_remote.metadata = {"fingerprint": fingerprint}
 
-    with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
-      assistant.update_if_config_has_changed()
+    # Create a non-coroutine function to replace the async update method
+    def sync_update():
+      return None
 
-    # Verify update was not called
-    mock_update.assert_not_called()
+    # Mock the update method and _get_remote_config
+    with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
+      with patch.object(Assistant, 'update', new=sync_update):
+        assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+
+        # We need to patch the update method again to track calls
+        with patch.object(assistant, 'update') as mock_update_method:
+          assistant.update_if_config_has_changed()
+
+          # Verify update was not called
+          mock_update_method.assert_not_called()
 
 
 class TestAgentDelete:
+
   @patch('openai.beta.assistants.delete')
   def test_delete(self, mock_delete, config, model, env_var, mock_parse_file):
     # Set environment variable
@@ -138,40 +162,52 @@ class TestAgentDelete:
     mock_delete.assert_called_once_with("test_assistant_id")
 
 
-class TestAgentQuery:
-  @patch('openai.beta.threads.messages.create')
-  @patch('openai.beta.threads.runs.create_and_poll')
-  @patch('openai.beta.threads.messages.list')
-  @patch('openai.beta.threads.create')
-  def test_query(self, mock_create_thread, mock_list_messages, mock_create_and_poll, mock_create_message, config, model, env_var, mock_parse_file):
+class TestAgentCreateThread:
+
+  def test_create_thread(self, config, model, env_var, mock_parse_file):
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
-    # Mock the thread creation response
-    mock_thread = MagicMock()
-    mock_thread.id = "test_thread_id"
-    mock_create_thread.return_value = mock_thread
+    # Create a mock for openai.beta.threads.create
+    with patch('openai.beta.threads.create') as mock_create_thread:
+      # Mock the thread creation response
+      mock_thread = MagicMock()
+      mock_thread.id = "test_thread_id"
+      mock_create_thread.return_value = mock_thread
 
-    # Mock the message creation response
-    mock_message = MagicMock()
-    mock_message.id = "test_message_id"
-    mock_create_message.return_value = mock_message
+      # Create the assistant and call create_thread
+      assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+      thread = assistant.create_thread()
 
-    # Mock the run creation and polling response
-    mock_run = MagicMock()
-    mock_run.id = "test_run_id"
-    mock_run.status = "completed"
-    mock_create_and_poll.return_value = mock_run
+      # Verify the results
+      assert thread.thread_id == "test_thread_id"
+      assert thread.assistant_id == "test_assistant_id"
+      mock_create_thread.assert_called_once()
 
-    # Mock the messages list response
-    mock_list_response = MagicMock()
-    mock_content = MagicMock()
-    mock_content.text = MagicMock()
-    mock_content.text.value = '{"name": "test", "age": 25}'
-    mock_list_response.data = [MagicMock(content=[mock_content])]
-    mock_list_messages.return_value = mock_list_response
 
+class TestAgentQuery:
+
+  def test_query(self, config, model, env_var, mock_parse_file):
+    # Set environment variable
+    os.environ[env_var] = "test_assistant_id"
+
+    # Create a mock thread instance
+    mock_thread_instance = MagicMock()
+    mock_thread_instance.add_message = MagicMock(return_value="test_message_id")
+    mock_thread_instance.run = MagicMock(return_value=DummyModel(name="test", age=25))
+
+    # Create the assistant
     assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
-    response = assistant.query("test query")
-    assert response.name == "test"
-    assert response.age == 25
+
+    # Mock create_thread to return the mock thread instance directly (not as a coroutine)
+    with patch.object(assistant, 'create_thread', return_value=mock_thread_instance):
+      # Execute the query
+      response = assistant.query("test query")
+
+      # Verify the results
+      assert response.name == "test"
+      assert response.age == 25
+
+      # Verify the thread methods were called correctly
+      mock_thread_instance.add_message.assert_called_once_with("test query")
+      mock_thread_instance.run.assert_called_once_with(model)
