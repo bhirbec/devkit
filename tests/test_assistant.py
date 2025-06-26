@@ -162,6 +162,21 @@ class TestAgentDelete:
     mock_delete.assert_called_once_with("test_assistant_id")
 
 
+class TestAgentInitThread:
+
+  def test_create_thread(self, config, model, env_var, mock_parse_file):
+    # Set environment variable
+    os.environ[env_var] = "test_assistant_id"
+
+    # Create the assistant and call create_thread
+    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    thread = assistant.init_thread('test_thread_id')
+
+    # Verify the results
+    assert thread.thread_id == "test_thread_id"
+    assert thread.assistant_id == "test_assistant_id"
+
+
 class TestAgentCreateThread:
 
   def test_create_thread(self, config, model, env_var, mock_parse_file):
