@@ -50,6 +50,15 @@ class Assistant(object):
       logger.error(f"Error creating thread: {e}")
       raise
 
+  def init_thread(self, thread_id: str) -> Thread:
+    """
+    Initialize a thread for conversation with the assistant.
+
+    Returns:
+      A Thread object
+    """
+    return Thread(thread_id, self._get_assistant_id())
+
   def _compute_fingerprint(self, config: dict) -> str:
     """
     Compute a fingerprint of the configuration.
@@ -130,8 +139,8 @@ class Assistant(object):
     """
     Delete the assistant.
     """
+    assistant_id = self._get_assistant_id()
     try:
-      assistant_id = self._get_assistant_id()
       openai.beta.assistants.delete(assistant_id)
       logger.info(f"Assistant deleted: {assistant_id}")
 
