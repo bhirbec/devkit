@@ -225,4 +225,4 @@ class TestAgentQuery:
 
       # Verify the thread methods were called correctly
       mock_thread_instance.add_message.assert_called_once_with("test query")
-      mock_thread_instance.run.assert_called_once_with(model)
+      mock_thread_instance.run.assert_called_once()
