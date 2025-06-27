@@ -45,7 +45,7 @@ class Assistant(object):
     try:
       thread = openai.beta.threads.create()
       logger.info(f"Created thread: {thread.id}")
-      return Thread(thread.id, self._get_assistant_id())
+      return Thread(thread.id, self._get_assistant_id(), self.model)
     except Exception as e:
       logger.error(f"Error creating thread: {e}")
       raise
@@ -57,7 +57,7 @@ class Assistant(object):
     Returns:
       A Thread object
     """
-    return Thread(thread_id, self._get_assistant_id())
+    return Thread(thread_id, self._get_assistant_id(), self.model)
 
   def _compute_fingerprint(self, config: dict) -> str:
     """
@@ -171,7 +171,7 @@ class Assistant(object):
       message_id = thread.add_message(prompt)
       logger.debug(f"Added message with ID: {message_id}")
 
-      result = thread.run(self.model)
+      result = thread.run()
       return result
     except Exception as e:
       logger.error(f"Error in query handling: {e}")

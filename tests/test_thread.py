@@ -26,7 +26,7 @@ class TestThread:
     mock_message.id = "test_message_id"
     mock_create_message.return_value = mock_message
 
-    thread = Thread("test_thread_id", "test_assistant_id")
+    thread = Thread("test_thread_id", "test_assistant_id", DummyModel)
     message_id = thread.add_message("test message")
 
     assert message_id == "test_message_id"
@@ -53,8 +53,8 @@ class TestThread:
     mock_list_response.data = [MagicMock(content=[mock_content])]
     mock_list_messages.return_value = mock_list_response
 
-    thread = Thread("test_thread_id", "test_assistant_id")
-    response = thread.run(DummyModel)
+    thread = Thread("test_thread_id", "test_assistant_id", DummyModel)
+    response = thread.run()
 
     assert response.name == "test"
     assert response.age == 25
@@ -69,27 +69,28 @@ class TestThread:
     )
 
   @patch('openai.beta.threads.messages.list')
-  def test_get_last_message_without_model(self, mock_list_messages):
+  def test_get_last_message_json_error(self, mock_list_messages):
     # Mock the messages list response
     mock_list_response = MagicMock()
     mock_content = MagicMock()
     mock_content.type = 'text'
     mock_content.text = MagicMock()
-    mock_content.text.value = 'test message content'
+    mock_content.text.value = 'invalid json content'
     mock_list_response.data = [MagicMock(content=[mock_content])]
     mock_list_messages.return_value = mock_list_response
 
-    thread = Thread("test_thread_id", "test_assistant_id")
-    content = thread.get_last_message()
+    thread = Thread("test_thread_id", "test_assistant_id", DummyModel)
 
-    assert content == mock_content
+    with pytest.raises(ValueError, match="Invalid JSON response"):
+      thread.get_last_message()
+
     mock_list_messages.assert_called_once_with(
         thread_id="test_thread_id",
         limit=1
     )
 
   @patch('openai.beta.threads.messages.list')
-  def test_get_last_message_with_model(self, mock_list_messages):
+  def test_get_last_message(self, mock_list_messages):
     # Mock the messages list response
     mock_list_response = MagicMock()
     mock_content = MagicMock()
@@ -99,8 +100,8 @@ class TestThread:
     mock_list_response.data = [MagicMock(content=[mock_content])]
     mock_list_messages.return_value = mock_list_response
 
-    thread = Thread("test_thread_id", "test_assistant_id")
-    response = thread.get_last_message(DummyModel)
+    thread = Thread("test_thread_id", "test_assistant_id", DummyModel)
+    response = thread.get_last_message()
 
     assert response.name == "test"
     assert response.age == 25
