@@ -2,7 +2,7 @@ import json
 import logging
 import hashlib
 import os
-from typing import Any, Type
+from typing import Any, Type, Optional
 
 import openai
 from pydantic import BaseModel
@@ -20,7 +20,7 @@ class Assistant(object):
   model: Type[BaseModel]
   env_var: str
 
-  def __init__(self, config_path: str, model: Type[BaseModel], env_var: str = "ASSISTANT_ID"):
+  def __init__(self, config_path: str, model: Type[BaseModel], env_var: str = "ASSISTANT_ID", vector_store_id: Optional[str] = None):
     self.env_var = env_var
     self.model = model
 
@@ -34,6 +34,13 @@ class Assistant(object):
                 "schema": model.model_json_schema(),
         }
     }
+
+    # Add file_search tool if vector_store_id is provided
+    if vector_store_id:
+      self.config["tools"] = [{
+          "type": "file_search",
+          "vector_store_id": vector_store_id
+      }]
 
   def create_thread(self) -> Thread:
     """
@@ -121,7 +128,7 @@ class Assistant(object):
     else:
       logger.info("No changes detected in configuration.")
 
-  def _get_remote_config(self) -> openai.types.beta.assistant.Assistant:
+  def _get_remote_config(self) -> Any:
     """
     Fetch the current assistant configuration from OpenAI API.
 
