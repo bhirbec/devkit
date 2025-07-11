@@ -54,7 +54,7 @@ class Thread:
     )
 
     if not messages.data:
-      raise ValueError("No messages found in the thread")
+      return {}
 
     content = messages.data[0].content[0]
 
@@ -65,7 +65,7 @@ class Thread:
         parsed = json.loads(response)
         logger.info(f"Response:\n{json.dumps(parsed, indent=2)}")
         return self.model.model_validate(parsed)
-      except json.JSONDecodeError as e:
+      except Exception as e:
         logger.error(f"Error parsing JSON response: {e}")
         logger.error(f"Raw response: {response}")
         raise ValueError(f"Invalid JSON response: {e}")
