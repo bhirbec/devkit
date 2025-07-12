@@ -1,4 +1,4 @@
-from pykit.md_utils import render, process_includes
+from pykit.templating.md import render, process_includes
 
 
 class TestProcessIncludes:

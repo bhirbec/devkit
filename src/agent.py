@@ -4,7 +4,7 @@ from typing import Dict
 import openai
 from pydantic import BaseModel
 
-from .yaml_utils import parse_file
+from .templating.yaml import parse_file
 
 # logging
 logging.basicConfig(level=logging.INFO)
