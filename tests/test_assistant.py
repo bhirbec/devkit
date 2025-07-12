@@ -6,26 +6,17 @@ from unittest.mock import patch, MagicMock
 
 from pykit.assistant import Assistant
 
+CONFIG = {
+    "name": "Test Assistant",
+    "instructions": "A test assistant",
+    "model": "gpt-4",
+    "tools": []
+}
+
 
 @pytest.fixture(autouse=True)
 def setup_env():
   os.environ["OPENAI_API_KEY"] = "dummy-key"
-
-
-@pytest.fixture
-def mock_parse_file(config):
-  with patch('pykit.assistant.parse_file', return_value=config) as mock:
-    yield mock
-
-
-@pytest.fixture
-def config():
-  return {
-      "name": "Test Assistant",
-      "instructions": "A test assistant",
-      "model": "gpt-4-turbo-preview",
-      "tools": []
-  }
 
 
 @pytest.fixture
@@ -44,23 +35,23 @@ class DummyModel(BaseModel):
 
 
 class TestAgentInit:
-  def test_init(self, config, model, env_var, mock_parse_file):
-    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+  def test_init(self, model, env_var):
+    assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
     assert assistant.env_var == env_var
-    assert assistant.config == config
+    assert assistant.config == CONFIG
 
 
 class TestAgentCreate:
 
   @patch('openai.beta.assistants.create')
   @patch('pykit.assistant.set_key')
-  def test_create(self, mock_set_key, mock_create, config, model, env_var, mock_parse_file):
+  def test_create(self, mock_set_key, mock_create, model, env_var):
     # Mock the assistant creation response
     mock_assistant = MagicMock()
     mock_assistant.id = "test_assistant_id"
     mock_create.return_value = mock_assistant
 
-    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
     assistant.create()
 
     # Verify OpenAI API was called with correct config
@@ -71,7 +62,7 @@ class TestAgentCreate:
 class TestAgentUpdate:
 
   @patch('openai.beta.assistants.update')
-  def test_update(self, mock_update, config, model, env_var, mock_parse_file):
+  def test_update(self, mock_update, model, env_var):
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
@@ -80,7 +71,7 @@ class TestAgentUpdate:
     mock_assistant.id = "test_assistant_id"
     mock_update.return_value = mock_assistant
 
-    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
     assistant.update()
 
     # Verify OpenAI API was called with correct config
@@ -90,7 +81,7 @@ class TestAgentUpdate:
 class TestAgentUpdateIfConfigChanged:
 
   @patch('openai.beta.assistants.update')
-  def test_update_when_config_changed(self, mock_update, config, model, env_var, mock_parse_file):
+  def test_update_when_config_changed(self, mock_update, model, env_var):
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
@@ -106,7 +97,7 @@ class TestAgentUpdateIfConfigChanged:
     # Mock the update method and _get_remote_config
     with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
       with patch.object(Assistant, 'update', new=sync_update):
-        assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+        assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
 
         # We need to patch the update method again to track calls
         with patch.object(assistant, 'update') as mock_update_method:
@@ -116,11 +107,11 @@ class TestAgentUpdateIfConfigChanged:
           mock_update_method.assert_called_once()
 
   @patch('openai.beta.assistants.update')
-  def test_no_update_when_config_unchanged(self, mock_update, config, model, env_var, mock_parse_file):
+  def test_no_update_when_config_unchanged(self, mock_update, model, env_var):
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
-    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
     fingerprint = assistant._compute_fingerprint(assistant.config)
 
     # Mock the remote assistant with same fingerprint
@@ -134,7 +125,7 @@ class TestAgentUpdateIfConfigChanged:
     # Mock the update method and _get_remote_config
     with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
       with patch.object(Assistant, 'update', new=sync_update):
-        assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+        assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
 
         # We need to patch the update method again to track calls
         with patch.object(assistant, 'update') as mock_update_method:
@@ -147,7 +138,7 @@ class TestAgentUpdateIfConfigChanged:
 class TestAgentDelete:
 
   @patch('openai.beta.assistants.delete')
-  def test_delete(self, mock_delete, config, model, env_var, mock_parse_file):
+  def test_delete(self, mock_delete, model, env_var):
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
@@ -155,7 +146,7 @@ class TestAgentDelete:
     mock_assistant = MagicMock()
     mock_delete.return_value = mock_assistant
 
-    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
     assistant.delete()
 
     # Verify OpenAI API was called with correct assistant ID
@@ -164,12 +155,12 @@ class TestAgentDelete:
 
 class TestAgentInitThread:
 
-  def test_create_thread(self, config, model, env_var, mock_parse_file):
+  def test_create_thread(self, model, env_var):
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
     # Create the assistant and call create_thread
-    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
     thread = assistant.init_thread('test_thread_id')
 
     # Verify the results
@@ -179,7 +170,7 @@ class TestAgentInitThread:
 
 class TestAgentCreateThread:
 
-  def test_create_thread(self, config, model, env_var, mock_parse_file):
+  def test_create_thread(self, model, env_var):
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
@@ -191,7 +182,7 @@ class TestAgentCreateThread:
       mock_create_thread.return_value = mock_thread
 
       # Create the assistant and call create_thread
-      assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+      assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
       thread = assistant.create_thread()
 
       # Verify the results
@@ -202,7 +193,7 @@ class TestAgentCreateThread:
 
 class TestAgentQuery:
 
-  def test_query(self, config, model, env_var, mock_parse_file):
+  def test_query(self, model, env_var):
     # Set environment variable
     os.environ[env_var] = "test_assistant_id"
 
@@ -212,7 +203,7 @@ class TestAgentQuery:
     mock_thread_instance.run = MagicMock(return_value=DummyModel(name="test", age=25))
 
     # Create the assistant
-    assistant = Assistant(config_path="dummy_path", model=model, env_var=env_var)
+    assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
 
     # Mock create_thread to return the mock thread instance directly (not as a coroutine)
     with patch.object(assistant, 'create_thread', return_value=mock_thread_instance):
