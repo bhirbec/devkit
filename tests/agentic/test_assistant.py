@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 from unittest.mock import patch, MagicMock
 
-from pykit.assistant import Assistant
+from pykit.agentic.assistant import Assistant
 
 CONFIG = {
     "name": "Test Assistant",
@@ -44,7 +44,7 @@ class TestAgentInit:
 class TestAgentCreate:
 
   @patch('openai.beta.assistants.create')
-  @patch('pykit.assistant.set_key')
+  @patch('pykit.agentic.assistant.set_key')
   def test_create(self, mock_set_key, mock_create, model, env_var):
     # Mock the assistant creation response
     mock_assistant = MagicMock()
@@ -95,7 +95,7 @@ class TestAgentUpdateIfConfigChanged:
       return None
 
     # Mock the update method and _get_remote_config
-    with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
+    with patch('pykit.agentic.assistant.Assistant._get_remote_config', return_value=mock_remote):
       with patch.object(Assistant, 'update', new=sync_update):
         assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
 
@@ -123,7 +123,7 @@ class TestAgentUpdateIfConfigChanged:
       return None
 
     # Mock the update method and _get_remote_config
-    with patch('pykit.assistant.Assistant._get_remote_config', return_value=mock_remote):
+    with patch('pykit.agentic.assistant.Assistant._get_remote_config', return_value=mock_remote):
       with patch.object(Assistant, 'update', new=sync_update):
         assistant = Assistant(config=CONFIG, model=model, env_var=env_var)
 

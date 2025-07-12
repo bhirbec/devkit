@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel
 from unittest.mock import patch, MagicMock
 
-from pykit.thread import Thread
+from pykit.agentic.thread import Thread
 
 
 @pytest.fixture(autouse=True)
