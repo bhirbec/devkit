@@ -2,13 +2,12 @@ import json
 import logging
 import hashlib
 import os
-from typing import Any, Type, Optional
+from typing import Any, Type
 
 import openai
 from pydantic import BaseModel
 from dotenv import set_key, unset_key
 
-from .yaml_utils import parse_file
 from .thread import Thread
 
 # logging
@@ -20,27 +19,10 @@ class Assistant(object):
   model: Type[BaseModel]
   env_var: str
 
-  def __init__(self, config_path: str, model: Type[BaseModel], env_var: str = "ASSISTANT_ID", vector_store_id: Optional[str] = None):
+  def __init__(self, config: dict, model: Type[BaseModel], env_var: str = "ASSISTANT_ID"):
     self.env_var = env_var
     self.model = model
-
-    # Load the assistant config
-    self.config = parse_file(config_path)
-    self.config["response_format"] = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "schema",
-                "description": "A schema for the response.",
-                "schema": model.model_json_schema(),
-        }
-    }
-
-    # Add file_search tool if vector_store_id is provided
-    if vector_store_id:
-      self.config["tools"] = [{
-          "type": "file_search",
-          "vector_store_id": vector_store_id
-      }]
+    self.config = config
 
   def create_thread(self) -> Thread:
     """
