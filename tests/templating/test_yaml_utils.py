@@ -1,5 +1,5 @@
 import pytest
-from pykit.yaml_utils import parse_file
+from pykit.templating.yaml import parse_file
 
 
 class TestIncludeMarkdownFile:
