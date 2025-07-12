@@ -1,6 +1,6 @@
 import logging
 import json
-from typing import Optional, Any, Type, Union
+from typing import Any, Type
 
 import openai
 from pydantic import BaseModel

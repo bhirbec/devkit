@@ -8,7 +8,7 @@ import openai
 from pydantic import BaseModel
 from dotenv import set_key, unset_key
 
-from .thread import Thread
+from pykit.agentic.thread import Thread
 
 # logging
 logger = logging.getLogger(__name__)
