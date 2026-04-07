@@ -1,5 +1,5 @@
 [project]
-name = "pykit"
+name = "devkit"
 version = "0.1.0"
 description = "A collection of Python utilities"
 authors = [{ name = "Benoit Hirbec", email = "benoit.hirbec@gmail.com" }]
@@ -10,6 +10,7 @@ dependencies = [
   "pydantic==2.11.2",
   "pyyaml>=6.0.2",
   "openai>=1.95.1",
+  "pyjwt[crypto]>=2.10.1",
 ]
 
 [project.optional-dependencies]
@@ -19,7 +20,13 @@ dev = [
 ]
 
 [tool.setuptools]
-package-dir = {"pykit" = "src"}
+package-dir = {"devkit" = "src"}
+packages = [
+  "devkit",
+  "devkit.agentic",
+  "devkit.templating",
+  "devkit.auth",
+]
 
 [build-system]
 requires = ["setuptools", "wheel"]
