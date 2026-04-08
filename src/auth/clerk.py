@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 def verify_clerk_jwt(
-  token: str,
-  issuer: Optional[str] = None,
-  audience: Optional[str] = None,
+    token: str,
+    issuer: Optional[str] = None,
+    audience: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
   if token.count(".") != 2:
     return None
@@ -25,11 +25,11 @@ def verify_clerk_jwt(
   try:
     signing_key = jwk_client.get_signing_key_from_jwt(token)
     decoded = jwt.decode(
-      token,
-      signing_key.key,
-      algorithms=["RS256"],
-      issuer=issuer,
-      audience=audience or None,
+        token,
+        signing_key.key,
+        algorithms=["RS256"],
+        issuer=issuer,
+        audience=audience or None,
     )
   except ExpiredSignatureError:
     return None
@@ -46,12 +46,12 @@ def _normalize_claims(decoded: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return None
 
   return {
-    "user_id": user_id,
-    "first_name": decoded.get("first_name"),
-    "last_name": decoded.get("last_name"),
-    "email": decoded.get("email"),
-    "phone": decoded.get("phone"),
-    "image_url": decoded.get("image_url"),
+      "user_id": user_id,
+      "first_name": decoded.get("first_name"),
+      "last_name": decoded.get("last_name"),
+      "email": decoded.get("email"),
+      "phone": decoded.get("phone"),
+      "image_url": decoded.get("image_url"),
   }
 
 
