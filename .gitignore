@@ -7,3 +7,5 @@ __pycache__
 # Build
 build/
 dist/
+packages/**/node_modules/
+packages/**/dist/
