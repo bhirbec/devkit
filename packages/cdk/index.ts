@@ -7,4 +7,5 @@ export * from './src/ses-stack';
 export * from './src/s3-stack';
 export * from './src/static-website-stack';
 export * from './src/lib/domain';
+export * from './src/lib/lambda';
 export * from './src/lib/perms';
